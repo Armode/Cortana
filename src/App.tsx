@@ -4,7 +4,7 @@ import { tools } from './ai/tools';
 import { Mood, GroundingChunk, Task } from './types';
 import { Content } from '@google/genai';
 import ReactMarkdown from 'react-markdown';
-import { Send, Loader2, Moon, Sun, CheckCircle2, Circle } from 'lucide-react';
+import { Send, Loader2, Moon, Sun, CheckCircle2, Circle, Menu, X, ListTodo } from 'lucide-react';
 
 interface Message {
   role: 'user' | 'model';
@@ -44,6 +44,8 @@ export default function App() {
   });
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [taskFilter, setTaskFilter] = useState<'all' | 'pending' | 'completed'>('all');
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -169,18 +171,38 @@ export default function App() {
   };
 
   const isDark = mood === 'dark';
+  const filteredTasks = tasks.filter(t => taskFilter === 'all' ? true : t.status === taskFilter);
 
   return (
     <div className={`min-h-screen flex flex-col transition-colors duration-500 ${isDark ? 'bg-zinc-950 text-zinc-100' : 'bg-slate-50 text-slate-900'}`}>
       <header className={`p-4 flex justify-between items-center border-b ${isDark ? 'border-zinc-800 bg-zinc-900/50' : 'border-slate-200 bg-white/50'} backdrop-blur-sm sticky top-0 z-10`}>
         <div className="flex items-center gap-2">
+          <button 
+            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+            className={`md:hidden p-2 -ml-2 rounded-lg transition-colors ${isDark ? 'hover:bg-zinc-800 text-zinc-400' : 'hover:bg-slate-200 text-slate-600'}`}
+          >
+            <Menu size={20} />
+          </button>
           <div className={`w-8 h-8 rounded-full flex items-center justify-center ${isDark ? 'bg-indigo-500/20 text-indigo-400' : 'bg-indigo-100 text-indigo-600'}`}>
             {isDark ? <Moon size={18} /> : <Sun size={18} />}
           </div>
-          <h1 className="font-semibold text-lg tracking-tight">Interactive Agent</h1>
+          <h1 className="font-semibold text-lg tracking-tight hidden sm:block">Interactive Agent</h1>
         </div>
-        <div className="text-xs font-medium uppercase tracking-wider opacity-50">
-          Mood: {mood}
+        <div className="flex items-center gap-4">
+          <div className="text-xs font-medium uppercase tracking-wider opacity-50 hidden sm:block">
+            Mood: {mood}
+          </div>
+          <button 
+            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+            className={`md:hidden flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+              isSidebarOpen 
+                ? (isDark ? 'bg-indigo-500/20 text-indigo-400' : 'bg-indigo-100 text-indigo-600')
+                : (isDark ? 'hover:bg-zinc-800 text-zinc-400' : 'hover:bg-slate-200 text-slate-600')
+            }`}
+          >
+            <ListTodo size={16} />
+            <span className="hidden sm:inline">Tasks</span>
+          </button>
         </div>
       </header>
 
@@ -237,13 +259,51 @@ export default function App() {
           </div>
         </main>
 
-        <aside className={`hidden md:block w-80 border-l p-4 overflow-y-auto ${isDark ? 'border-zinc-800 bg-zinc-900/30' : 'border-slate-200 bg-slate-50/50'}`}>
-          <h2 className="font-semibold mb-4 text-sm uppercase tracking-wider opacity-70">Tasks</h2>
-          {tasks.length === 0 ? (
-            <p className="text-sm opacity-50">No tasks yet. Ask me to create one!</p>
+        {/* Mobile Overlay */}
+        {isSidebarOpen && (
+          <div 
+            className="fixed inset-0 bg-black/50 z-40 md:hidden backdrop-blur-sm"
+            onClick={() => setIsSidebarOpen(false)}
+          />
+        )}
+
+        <aside className={`
+          fixed inset-y-0 right-0 z-50 w-80 border-l p-4 overflow-y-auto transform transition-transform duration-300 ease-in-out
+          md:relative md:translate-x-0 md:block
+          ${isSidebarOpen ? 'translate-x-0' : 'translate-x-full'}
+          ${isDark ? 'border-zinc-800 bg-zinc-900 md:bg-zinc-900/30' : 'border-slate-200 bg-white md:bg-slate-50/50'}
+        `}>
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="font-semibold text-sm uppercase tracking-wider opacity-70">Tasks</h2>
+            <button 
+              onClick={() => setIsSidebarOpen(false)}
+              className="md:hidden p-1 rounded-md hover:bg-black/10 dark:hover:bg-white/10"
+            >
+              <X size={18} />
+            </button>
+          </div>
+
+          <div className="flex gap-1 mb-4 p-1 rounded-lg bg-black/5 dark:bg-white/5">
+            {(['all', 'pending', 'completed'] as const).map(filter => (
+              <button
+                key={filter}
+                onClick={() => setTaskFilter(filter)}
+                className={`flex-1 text-xs font-medium py-1.5 rounded-md capitalize transition-colors ${
+                  taskFilter === filter 
+                    ? (isDark ? 'bg-zinc-800 text-white shadow-sm' : 'bg-white text-slate-900 shadow-sm')
+                    : 'opacity-60 hover:opacity-100'
+                }`}
+              >
+                {filter}
+              </button>
+            ))}
+          </div>
+
+          {filteredTasks.length === 0 ? (
+            <p className="text-sm opacity-50">No tasks found.</p>
           ) : (
             <div className="space-y-2">
-              {tasks.map(task => (
+              {filteredTasks.map(task => (
                 <div key={task.id} className={`p-3 rounded-xl border flex items-start gap-3 transition-colors ${isDark ? 'border-zinc-800 bg-zinc-900' : 'border-slate-200 bg-white shadow-sm'}`}>
                   <div className="mt-0.5 text-indigo-500">
                     {task.status === 'completed' ? <CheckCircle2 size={18} /> : <Circle size={18} />}
