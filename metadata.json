@@ -1,0 +1,5 @@
+{
+  "name": "Interactive Agent Environment",
+  "description": "An interactive AI agent environment with UI mood control and streaming responses.",
+  "requestFramePermissions": []
+}
