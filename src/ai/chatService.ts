@@ -9,13 +9,17 @@ export async function* streamChatResponse({
   tools,
   newMessage,
   onMoodChange,
+  onTaskOperation,
+  currentTasks = [],
   streamMode = "buffered",
 }: StreamChatResponseArgs): AsyncGenerator<StreamYield> {
+  const tasksContext = `\n\nCurrent Tasks:\n${JSON.stringify(currentTasks, null, 2)}\n\nYou can manage these tasks using the create_task and update_task_status tools.`;
+
   const chatOptions: any = {
     model: modelName,
     config: {
       tools,
-      systemInstruction: SYSTEM_INSTRUCTION
+      systemInstruction: SYSTEM_INSTRUCTION + tasksContext
     }
   };
   
@@ -60,7 +64,7 @@ export async function* streamChatResponse({
 
     if (hasToolCall) {
       const responses = await Promise.all(
-        toolCalls.map(tc => executeToolCall(tc, onMoodChange))
+        toolCalls.map(tc => executeToolCall(tc, onMoodChange, onTaskOperation))
       );
 
       result = await chatInstance.sendMessageStream({
