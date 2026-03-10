@@ -13,7 +13,13 @@ interface Message {
 }
 
 export default function App() {
-  const [mood, setMood] = useState<Mood>('light');
+  const [mood, setMood] = useState<Mood>(() => {
+    const savedMood = localStorage.getItem('agent_mood');
+    if (savedMood === 'light' || savedMood === 'dark') {
+      return savedMood as Mood;
+    }
+    return 'light';
+  });
   const [messages, setMessages] = useState<Message[]>(() => {
     const saved = localStorage.getItem('chat_history');
     if (saved) {
@@ -32,6 +38,10 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem('chat_history', JSON.stringify(messages));
   }, [messages]);
+
+  useEffect(() => {
+    localStorage.setItem('agent_mood', mood);
+  }, [mood]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -89,11 +99,18 @@ export default function App() {
         }
       }
     } catch (error: any) {
-      console.error("Chat error:", error);
+      console.error("Chat error:", JSON.stringify(error));
       let errorMessage = 'Sorry, an error occurred.';
       
-      if (error?.status === 429 || error?.message?.includes('429') || error?.message?.includes('RESOURCE_EXHAUSTED')) {
-        errorMessage = 'You have exceeded your current Gemini API quota. Please check your plan and billing details at https://ai.google.dev/gemini-api/docs/rate-limits.';
+      // Parse the error object safely
+      const errObj = error?.error || error;
+      const errCode = errObj?.code || error?.status;
+      const errText = errObj?.message || error?.message || JSON.stringify(error);
+
+      if (errCode === 429 || errText?.includes('429') || errText?.includes('RESOURCE_EXHAUSTED')) {
+        errorMessage = 'You have exceeded your current Gemini API quota or rate limit. Please check your plan and billing details at https://ai.google.dev/gemini-api/docs/rate-limits.';
+      } else {
+        errorMessage = `Sorry, an error occurred: ${errText}`;
       }
 
       setMessages(prev => {
